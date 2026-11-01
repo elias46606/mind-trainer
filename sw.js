@@ -1,6 +1,6 @@
 // Mind Trainer – Service Worker (offline-fähige App-Hülle)
-const CACHE = 'mind-trainer-v5';
-const SHELL = ['./', 'index.html', 'app.js', 'questions.js', 'config.js', 'manifest.webmanifest', 'icon.svg', 'icon-192.png'];
+const CACHE = 'mind-trainer-v6';
+const SHELL = ['./', 'index.html', 'app.js', 'questions.js', 'config.js', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-180.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });
