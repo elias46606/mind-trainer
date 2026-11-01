@@ -26,7 +26,7 @@ const catIds=c=>c==='Mix'?KNOW_CATS.flatMap(k=>Q[k].map(x=>x[0])):(Q[c]||[]).map
 /* ---------- Zustand ---------- */
 const FIELDS=['username','rounds','best','quizBest','seen','wrong','habits','days'];
 const EMPTY=()=>({username:'',rounds:0,best:{math:0,digits:0,stroop:0},quizBest:{},seen:[],wrong:[],habits:{},days:[]});
-let S=EMPTY(),USER=null,MODE=null,IS_ADMIN=false,pendingName='',pendingCarry=null;
+let S=EMPTY(),USER=null,MODE=null,IS_ADMIN=false,ADMIN_ERR='',pendingName='',pendingCarry=null;
 const GKEY='mindtrainer-guest-v2',GFLAG='mindtrainer-guestmode';
 const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 function clean(d){const o=EMPTY();FIELDS.forEach(f=>{if(d&&d[f]!=null)o[f]=d[f]});o.best=Object.assign(EMPTY().best,o.best||{});
@@ -141,7 +141,7 @@ async function loadCloud(){
     }
   }catch(e){console.error(e);toast('Konnte deine Daten nicht laden. Prüfe deine Verbindung.')}
   pendingName='';pendingCarry=null;
-  try{IS_ADMIN=(await fdb.collection('admins').doc(USER.uid).get()).exists}catch(e){IS_ADMIN=false}
+  ADMIN_ERR='';try{IS_ADMIN=(await fdb.collection('admins').doc(USER.uid).get()).exists}catch(e){IS_ADMIN=false;ADMIN_ERR=e.code||String(e)}
 }
 function enter(){go('home')}
 
@@ -377,7 +377,8 @@ function renderStats(){
     return `<div class="bar"><span>${c}</span><span class="num" style="color:${v==null?'var(--muted)':v>=8?'var(--good)':v>=5?'var(--warn)':'var(--bad)'}">${v==null?'–':v+'/10'}</span></div>`}).join('');
   const acc=$('#st-account');
   if(MODE==='cloud'){
-    acc.innerHTML=`<p class="label">Konto</p><p>${esc(USER.email||'')}</p><p class="muted small">Dein Fortschritt wird in deinem Konto gespeichert und ist auf jedem Gerät verfügbar.</p><button class="btn ghost" id="st-logout">Abmelden</button>`;
+    acc.innerHTML=`<p class="label">Konto</p><p>${esc(USER.email||'')}</p><p class="muted small">Dein Fortschritt wird in deinem Konto gespeichert und ist auf jedem Gerät verfügbar.</p><p class="label" style="margin-top:6px">Nutzer-UID</p><p class="num small" style="word-break:break-all;user-select:all">${esc(USER.uid)}</p><p class="small">Admin: ${IS_ADMIN?'<b style="color:var(--good)">ja</b>':'nein'}${ADMIN_ERR?' · Fehler: '+esc(ADMIN_ERR):''}</p><button class="btn ghost" id="st-recheck">Admin-Status neu prüfen</button><button class="btn ghost" id="st-logout">Abmelden</button>`;
+    $('#st-recheck').onclick=async()=>{await loadCloud();renderStats();toast(IS_ADMIN?'Du bist Admin':'Kein Admin-Eintrag gefunden')};
     $('#st-logout').onclick=async()=>{await save(true);ls.del(GFLAG);await auth.signOut()};
   }else{
     acc.innerHTML=`<p class="label">Gastmodus</p><p class="muted small">${HAS_FB?'Erstelle ein Konto, um deinen Fortschritt zu sichern. Dein bisheriger Gast-Fortschritt wird übernommen.':'Accounts sind noch nicht eingerichtet. Dein Fortschritt bleibt auf diesem Gerät.'}</p>${HAS_FB?'<button class="btn" data-go="auth">Konto erstellen</button>':''}`;
