@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mind Trainer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#ECEEF3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E111A" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mind Trainer">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: eine Spalte wie eine native App – Startseite mit Kacheln, jedes Spiel als eigener Screen */
+:root{
+  --bg:#ECEEF3; --surface:#FFFFFF; --ink:#151A28; --muted:#5D6478; --line:#D6DAE3;
+  --accent:#2E47F0; --accent-ink:#FFFFFF; --accent-soft:#E2E6FD;
+  --good:#1F9D5B; --bad:#D9363E; --warn:#C98A06;
+  --c-rot:#E23B3B; --c-blau:#2C62E8; --c-gruen:#1E9E57; --c-gelb:#E0A800;
+  --display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body:"Figtree", system-ui, -apple-system, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E111A; --surface:#181C28; --ink:#E9EBF2; --muted:#959CB0; --line:#2A3042;
+  --accent:#8091FF; --accent-ink:#0E111A; --accent-soft:#232A4A;
+  --good:#3CCB80; --bad:#FF6A70; --warn:#F2B53A;
+  --c-rot:#FF5A5A; --c-blau:#5B8CFF; --c-gruen:#3CCB80; --c-gelb:#F7C93B; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E111A; --surface:#181C28; --ink:#E9EBF2; --muted:#959CB0; --line:#2A3042;
+  --accent:#8091FF; --accent-ink:#0E111A; --accent-soft:#232A4A;
+  --good:#3CCB80; --bad:#FF6A70; --warn:#F2B53A;
+  --c-rot:#FF5A5A; --c-blau:#5B8CFF; --c-gruen:#3CCB80; --c-gelb:#F7C93B; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{min-height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;-webkit-tap-highlight-color:transparent;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.app{max-width:520px;margin:0 auto;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.view{display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:2.1rem;font-weight:800;line-height:1.05}
+h2{font-size:1.5rem;font-weight:800}
+h3{font-size:1.05rem;font-weight:600}
+p{margin:0}
+.muted{color:var(--muted)}
+.small{font-size:.85rem}
+.label{font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+button:disabled{opacity:.45;cursor:default}
+button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.streak{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.streak b{font-family:var(--mono);font-size:1.6rem;line-height:1;color:var(--accent)}
+.banner{background:var(--accent-soft);border-radius:14px;padding:11px 14px;font-size:.88rem;display:flex;gap:10px;align-items:center;justify-content:space-between}
+.banner button{font-weight:700;color:var(--accent);white-space:nowrap}
+
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px;text-align:left;display:flex;flex-direction:column;gap:10px;min-height:150px;transition:transform .15s;min-width:0}
+.tile:active{transform:scale(.97)}
+.tile .glyph{font-family:var(--mono);font-weight:700;font-size:1.5rem;line-height:1;color:var(--accent);height:34px;display:flex;align-items:center}
+.tile .best{margin-top:auto;font-size:.8rem;color:var(--muted)}
+.tile.wide{grid-column:1/-1;min-height:0;flex-direction:row;align-items:center;justify-content:space-between}
+.tile.feature{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.tile.feature .glyph,.tile.feature .best,.tile.feature .label{color:var(--accent-ink);opacity:.9}
+.tile.admin{border-style:dashed;border-color:var(--accent)}
+
+.bar{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.back{display:inline-flex;align-items:center;gap:6px;padding:8px 12px 8px 8px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font-weight:600;font-size:.9rem}
+.pill{font-family:var(--mono);font-weight:700;padding:6px 12px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font-size:.95rem}
+.pill.hot{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.stage{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:22px 18px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
+.stage.left{align-items:stretch;text-align:left}
+.big{font-family:var(--mono);font-weight:700;font-size:clamp(2.2rem,11vw,3.4rem);line-height:1.1;letter-spacing:-.02em;word-break:break-all}
+.answer{font-family:var(--mono);font-size:2rem;font-weight:700;min-height:2.6rem;border-bottom:3px solid var(--line);min-width:7ch;padding-bottom:4px}
+.answer.ok{border-color:var(--good);color:var(--good)}
+.answer.no{border-color:var(--bad);color:var(--bad)}
+.timer{height:6px;width:100%;background:var(--line);border-radius:6px;overflow:hidden}
+.timer i{display:block;height:100%;background:var(--accent);width:100%;transition:width .25s linear}
+
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.pad button{background:var(--surface);border:1px solid var(--line);border-radius:14px;height:58px;font-family:var(--mono);font-size:1.4rem;font-weight:700}
+.pad button:active{background:var(--accent-soft)}
+.pad .act{font-family:var(--body);font-size:1rem;color:var(--muted)}
+.pad .go{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-family:var(--body);font-size:1rem}
+
+.btn{display:block;width:100%;padding:15px;border-radius:14px;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:1rem;text-align:center}
+.btn.ghost{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.btn.danger{background:var(--bad);color:#fff}
+.link{color:var(--accent);font-weight:600;padding:4px 0}
+.row{display:flex;gap:10px}
+.row>*{flex:1}
+
+.colors{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.colors button{height:64px;border-radius:14px;font-weight:700;font-size:1.05rem;color:#fff;letter-spacing:.02em}
+.stroop{font-family:var(--display);font-weight:800;font-size:clamp(2.6rem,14vw,4rem);letter-spacing:.02em}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:10px 14px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font-weight:600;font-size:.92rem}
+.chip small{font-weight:500;color:var(--muted);margin-left:4px}
+.chip.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.chip.on small{color:var(--accent-ink);opacity:.85}
+.chip.redo{border-color:var(--bad)}
+.chip.redo.on{background:var(--bad);border-color:var(--bad);color:#fff}
+.opts{display:flex;flex-direction:column;gap:8px;width:100%}
+.opt{width:100%;text-align:left;padding:14px 16px;border-radius:14px;background:var(--bg);border:1.5px solid var(--line);font-weight:500}
+.opt.right{border-color:var(--good);background:color-mix(in srgb,var(--good) 14%,var(--surface))}
+.opt.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,var(--surface))}
+.q{font-size:1.15rem;font-weight:600;text-align:left;width:100%;text-wrap:pretty}
+.fact{font-size:.9rem;color:var(--muted);text-align:left;width:100%}
+.progress{height:6px;width:100%;background:var(--line);border-radius:6px;overflow:hidden}
+.progress i{display:block;height:100%;background:var(--accent)}
+
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;width:100%}
+.day{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:.72rem;color:var(--muted);font-weight:600}
+.day i{width:100%;aspect-ratio:1;max-width:38px;border-radius:10px;background:var(--line);display:block}
+.day i.l1{background:color-mix(in srgb,var(--accent) 35%,var(--line))}
+.day i.l2{background:color-mix(in srgb,var(--accent) 65%,var(--line))}
+.day i.l3{background:var(--accent)}
+.day.today{color:var(--ink)}
+.habits{display:flex;flex-direction:column;gap:8px;width:100%}
+.habit{display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:14px;background:var(--surface);border:1.5px solid var(--line);text-align:left;width:100%}
+.habit .box{width:24px;height:24px;border-radius:8px;border:2px solid var(--muted);flex:none;display:grid;place-items:center;font-size:.85rem;font-weight:800}
+.habit.done{border-color:var(--accent)}
+.habit.done .box{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.habit small{display:block;color:var(--muted);font-size:.8rem}
+.tip{background:var(--accent-soft);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.stat b{font-family:var(--mono);font-size:1.5rem}
+.result{display:flex;flex-direction:column;align-items:center;gap:6px}
+.new{color:var(--good);font-weight:700}
+
+/* Formulare */
+.form{display:flex;flex-direction:column;gap:12px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:.85rem;font-weight:600}
+.field input{font:inherit;font-size:16px;padding:13px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);width:100%}
+.field input:focus{border-color:var(--accent);outline:none}
+.err{color:var(--bad);font-size:.88rem;min-height:1.2em}
+.ok-msg{color:var(--good);font-size:.88rem}
+.tabs{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px}
+.tabs button{flex:1;padding:10px;border-radius:9px;font-weight:600;color:var(--muted)}
+.tabs button.on{background:var(--accent);color:var(--accent-ink)}
+.hero-auth{display:flex;flex-direction:column;gap:8px;padding-top:12px}
+.hero-auth .glyphs{font-family:var(--mono);font-weight:700;color:var(--accent);font-size:1.1rem;letter-spacing:.06em}
+
+/* Admin */
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:420px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+tr:last-child td{border-bottom:0}
+td.r,th.r{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--line)}
+.dot.live{background:var(--good)}
+.chart svg{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font-family:var(--mono);font-size:10px}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:11px 16px;border-radius:12px;font-size:.9rem;font-weight:600;max-width:calc(100% - 32px);z-index:20}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ANMELDUNG -->
+<section class="view" id="v-auth" hidden>
+  <div class="hero-auth">
+    <p class="glyphs">7×8 · 4 9 2 · ROT · ?!</p>
+    <h1>Mind<br>Trainer</h1>
+    <p class="muted">Kopfrechnen, Gedächtnis, Reaktion und Allgemeinwissen – jeden Tag ein paar Minuten.</p>
+  </div>
+  <div class="stage left" id="auth-box">
+    <div class="tabs" role="tablist">
+      <button id="tab-reg" class="on" role="tab">Registrieren</button>
+      <button id="tab-login" role="tab">Anmelden</button>
+    </div>
+    <form class="form" id="f-auth" novalidate>
+      <div class="field" id="fld-name"><label for="in-name">Benutzername</label><input id="in-name" autocomplete="nickname" maxlength="20" placeholder="z. B. eli_46"></div>
+      <div class="field"><label for="in-mail">E-Mail</label><input id="in-mail" type="email" autocomplete="email" inputmode="email"></div>
+      <div class="field"><label for="in-pass">Passwort</label><input id="in-pass" type="password" autocomplete="new-password" placeholder="mindestens 6 Zeichen"></div>
+      <p class="err" id="auth-err"></p>
+      <button class="btn" id="auth-go" type="submit">Konto erstellen</button>
+      <button class="link" id="auth-forgot" type="button" hidden>Passwort vergessen?</button>
+    </form>
+  </div>
+  <p class="muted small" id="fb-missing" hidden>Accounts sind noch nicht eingerichtet (Firebase-Konfiguration fehlt). Du kannst die App als Gast testen.</p>
+  <button class="btn ghost" id="guest-go">Ohne Konto testen</button>
+  <p class="muted small">Als Gast wird dein Fortschritt nur auf diesem Gerät gespeichert.</p>
+</section>
+
+<!-- START -->
+<section class="view" id="v-home" hidden>
+  <div class="top">
+    <div><p class="label" id="greet">Training</p><h1 id="h-name">Mind<br>Trainer</h1></div>
+    <div class="streak"><b id="h-streak">0</b><span class="label">Tage Streak</span></div>
+  </div>
+  <div class="banner" id="guest-banner" hidden><span>Gastmodus – Fortschritt nur auf diesem Gerät.</span><button data-go="auth">Konto erstellen</button></div>
+  <div class="grid">
+    <button class="tile" data-go="math"><span class="glyph">7×8</span><div><h3>Kopfrechnen</h3><p class="muted small">60 Sekunden, wird schwerer</p></div><span class="best" id="b-math"></span></button>
+    <button class="tile" data-go="digits"><span class="glyph">4 9 2 7</span><div><h3>Zahlen merken</h3><p class="muted small">Arbeitsgedächtnis</p></div><span class="best" id="b-digits"></span></button>
+    <button class="tile" data-go="stroop"><span class="glyph" style="color:var(--c-gruen)">ROT</span><div><h3>Farben-Test</h3><p class="muted small">Stroop · 30 Sekunden</p></div><span class="best" id="b-stroop"></span></button>
+    <button class="tile" data-go="quizmenu"><span class="glyph">?!</span><div><h3>Allgemeinwissen</h3><p class="muted small" id="b-quiz-sub">8 Kategorien</p></div><span class="best" id="b-quiz"></span></button>
+    <button class="tile wide feature" data-go="life"><div style="display:flex;flex-direction:column;gap:4px"><span class="label">Lifemaxing</span><h3 style="font-size:1.25rem">Gewohnheiten & Life-Skills</h3><span class="best" id="b-life"></span></div><span class="glyph" style="font-size:2rem">↗</span></button>
+    <button class="tile wide" data-go="stats"><div><h3>Profil & Statistik</h3><p class="muted small" id="b-total"></p></div><span class="glyph">▤</span></button>
+    <button class="tile wide admin" data-go="admin" id="admin-tile" hidden><div><span class="label" style="color:var(--accent)">Nur für dich</span><h3>Admin-Dashboard</h3><p class="muted small">Nutzer, Aktivität, Anmeldungen</p></div><span class="glyph">◎</span></button>
+  </div>
+</section>
+
+<!-- KOPFRECHNEN -->
+<section class="view" id="v-math" hidden>
+  <div class="bar"><button class="back" data-go="home">← Zurück</button><span class="pill hot num" id="m-score">0</span></div>
+  <div class="stage" id="m-stage">
+    <div class="timer"><i id="m-timer"></i></div>
+    <p class="label" id="m-lvl">Level 1</p>
+    <div class="big" id="m-task">–</div>
+    <div class="answer" id="m-ans"></div>
+  </div>
+  <div class="pad" id="m-pad"></div>
+  <div class="stage" id="m-end" hidden></div>
+</section>
+
+<!-- ZAHLEN -->
+<section class="view" id="v-digits" hidden>
+  <div class="bar"><button class="back" data-go="home">← Zurück</button><span class="pill num" id="d-len">3 Ziffern</span></div>
+  <div class="stage" id="d-stage">
+    <p class="label" id="d-hint">Merk dir die Zahl</p>
+    <div class="big" id="d-show">–</div>
+    <div class="answer" id="d-ans"></div>
+  </div>
+  <div class="pad" id="d-pad"></div>
+  <div class="stage" id="d-end" hidden></div>
+</section>
+
+<!-- STROOP -->
+<section class="view" id="v-stroop" hidden>
+  <div class="bar"><button class="back" data-go="home">← Zurück</button><span class="pill hot num" id="s-score">0</span></div>
+  <div class="stage" id="s-stage">
+    <div class="timer"><i id="s-timer"></i></div>
+    <p class="label">Tippe die <u>Schriftfarbe</u>, nicht das Wort</p>
+    <div class="stroop" id="s-word">BLAU</div>
+    <p class="muted num small" id="s-wrong">Fehler: 0</p>
+  </div>
+  <div class="colors" id="s-btns"></div>
+  <div class="stage" id="s-end" hidden></div>
+</section>
+
+<!-- QUIZ-MENÜ -->
+<section class="view" id="v-quizmenu" hidden>
+  <div class="bar"><button class="back" data-go="home">← Zurück</button><span class="pill num" id="q-total"></span></div>
+  <h2>Allgemeinwissen</h2>
+  <p class="muted">Jede Frage kommt nur einmal. Falsch beantwortete landen im Fehler-Stapel, bis du sie richtig hast.</p>
+  <div class="chips" id="q-cats"></div>
+  <div class="stage left" id="q-empty" hidden></div>
+  <button class="btn" id="q-start">Runde starten</button>
+</section>
+
+<!-- QUIZ -->
+<section class="view" id="v-quiz" hidden>
+  <div class="bar"><button class="back" data-go="quizmenu">← Kategorien</button><span class="pill num" id="q-prog">1/10</span></div>
+  <div class="progress"><i id="q-bar" style="width:0"></i></div>
+  <div class="stage" id="q-stage">
+    <p class="label" id="q-cat" style="align-self:flex-start">Kategorie</p>
+    <p class="q" id="q-text"></p>
+    <div class="opts" id="q-opts"></div>
+    <p class="fact" id="q-fact" hidden></p>
+    <button class="btn" id="q-next" hidden>Weiter</button>
+  </div>
+  <div class="stage" id="q-end" hidden></div>
+</section>
+
+<!-- LIFEMAXING -->
+<section class="view" id="v-life" hidden>
+  <div class="bar"><button class="back" data-go="home">← Zurück</button><span class="pill hot num" id="l-count">0/6</span></div>
+  <h2>Lifemaxing</h2>
+  <div class="stage left">
+    <div class="bar"><p class="label">Diese Woche</p><p class="label" id="l-streak">Streak: 0</p></div>
+    <div class="week" id="l-week"></div>
+    <p class="muted small">Ein Tag zählt für die Streak ab 4 von 6 Gewohnheiten.</p>
+  </div>
+  <div class="habits" id="l-habits"></div>
+  <div class="tip"><span class="label" style="color:var(--accent)">Impuls des Tages</span><p id="l-tip"></p></div>
+  <button class="btn ghost" id="l-quiz">Life-Skills-Quiz starten</button>
+</section>
+
+<!-- PROFIL / STATISTIK -->
+<section class="view" id="v-stats" hidden>
+  <div class="bar"><button class="back" data-go="home">← Zurück</button></div>
+  <div><p class="label" id="st-mode">Konto</p><h2 id="st-name">Profil</h2></div>
+  <div class="stats" id="st-grid"></div>
+  <div class="stage left" style="gap:8px" id="st-quiz"></div>
+  <div class="stage left" style="gap:10px" id="st-account"></div>
+  <button class="btn ghost" id="st-reset">Fortschritt zurücksetzen</button>
+  <div class="stage left" id="st-confirm" hidden>
+    <p>Rekorde, gesehene Fragen, Fehler-Stapel und Gewohnheiten werden gelöscht. Dein Konto bleibt bestehen.</p>
+    <div class="row"><button class="btn danger" id="st-yes">Ja, löschen</button><button class="btn ghost" id="st-no">Abbrechen</button></div>
+  </div>
+</section>
+
+<!-- ADMIN -->
+<section class="view" id="v-admin" hidden>
+  <div class="bar"><button class="back" data-go="home">← Zurück</button><button class="pill" id="a-reload">Aktualisieren</button></div>
+  <div><p class="label">Admin</p><h2>Dein Dashboard</h2></div>
+  <div id="a-body" class="view"><p class="muted">Lade Nutzerdaten …</p></div>
+</section>
+
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="config.js"></script>
+<script src="questions.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
