@@ -57,17 +57,19 @@ let toastT=null;
 function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,3200)}
 
 /* ---------- Navigation ---------- */
-const VIEWS=['auth','home','math','digits','stroop','quizmenu','quiz','life','stats','admin'];
+const VIEWS=['auth','home','math','digits','stroop','quizmenu','quiz','life','stats','admin','privacy','contact'];
+let CUR='auth',PREV='auth';
 let timers=[];
 function clearTimers(){timers.forEach(t=>{clearInterval(t);clearTimeout(t)});timers=[]}
 function go(v){
   if(v==='admin'&&!IS_ADMIN)v='home';
   clearTimers();
+  if(v!=='privacy'&&v!=='contact')PREV=v;CUR=v;
   VIEWS.forEach(x=>$('#v-'+x).hidden=x!==v);
   window.scrollTo(0,0);
   ({auth:renderAuth,home:renderHome,math:startMath,digits:startDigits,stroop:startStroop,quizmenu:renderCats,life:renderLife,stats:renderStats,admin:renderAdmin}[v]||(()=>{}))();
 }
-document.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(b){e.preventDefault();go(b.dataset.go)}});
+document.addEventListener('click',e=>{if(e.target.closest('[data-back]')){e.preventDefault();go(MODE||PREV==='auth'?PREV:'auth');return}const b=e.target.closest('[data-go]');if(b){e.preventDefault();go(b.dataset.go)}});
 
 function markDay(){const k=dkey();if(!S.days.includes(k))S.days.push(k)}
 function finish(game,score,wrap,extra){
@@ -384,7 +386,25 @@ function renderStats(){
     acc.innerHTML=`<p class="label">Gastmodus</p><p class="muted small">${HAS_FB?'Erstelle ein Konto, um deinen Fortschritt zu sichern. Dein bisheriger Gast-Fortschritt wird übernommen.':'Accounts sind noch nicht eingerichtet. Dein Fortschritt bleibt auf diesem Gerät.'}</p>${HAS_FB?'<button class="btn" data-go="auth">Konto erstellen</button>':''}`;
   }
   $('#st-reset').hidden=false;$('#st-confirm').hidden=true;
+  $('#st-del').hidden=MODE!=='cloud';$('#st-delbox').hidden=true;
 }
+$('#copy-mail').onclick=async()=>{const m='derreiche40@gmail.com';try{await navigator.clipboard.writeText(m);toast('E-Mail-Adresse kopiert')}catch(e){const r=document.createRange();r.selectNodeContents(document.querySelector('#v-contact .mail'));const sel=getSelection();sel.removeAllRanges();sel.addRange(r);toast('Markiert – jetzt kopieren')}};
+$('#st-del').onclick=()=>{$('#st-del').hidden=true;$('#st-delbox').hidden=false;$('#del-err').textContent='';$('#del-pass').value=''};
+$('#del-no').onclick=()=>{$('#st-del').hidden=false;$('#st-delbox').hidden=true};
+$('#del-yes').onclick=async()=>{
+  const pw=$('#del-pass').value,err=$('#del-err');err.textContent='';
+  if(!pw){err.textContent='Bitte gib dein Passwort ein.';return}
+  const b=$('#del-yes');b.disabled=true;
+  try{
+    const u=auth.currentUser;
+    await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email,pw));
+    clearTimeout(saveT);const uid=u.uid;MODE=null;
+    await fdb.collection('users').doc(uid).delete();
+    await u.delete();
+    ls.del(GFLAG);toast('Dein Konto wurde gelöscht');
+  }catch(ex){MODE='cloud';err.textContent=AUTH_ERR[ex.code]||'Löschen fehlgeschlagen ('+(ex.code||'unbekannt')+').'}
+  b.disabled=false;
+};
 $('#st-reset').onclick=()=>{$('#st-reset').hidden=true;$('#st-confirm').hidden=false};
 $('#st-no').onclick=renderStats;
 $('#st-yes').onclick=()=>{const n=S.username;S=EMPTY();S.username=n;save(true);toast('Fortschritt zurückgesetzt');renderStats()};

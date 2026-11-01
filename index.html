@@ -13,8 +13,6 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
 /* Layout: eine Spalte wie eine native App – Startseite mit Kacheln, jedes Spiel als eigener Screen */
 :root{
@@ -22,9 +20,9 @@
   --accent:#2E47F0; --accent-ink:#FFFFFF; --accent-soft:#E2E6FD;
   --good:#1F9D5B; --bad:#D9363E; --warn:#C98A06;
   --c-rot:#E23B3B; --c-blau:#2C62E8; --c-gruen:#1E9E57; --c-gelb:#E0A800;
-  --display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
-  --body:"Figtree", system-ui, -apple-system, sans-serif;
-  --mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+  --display:"Avenir Next", "SF Pro Display", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --body:system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --mono:ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0E111A; --surface:#181C28; --ink:#E9EBF2; --muted:#959CB0; --line:#2A3042;
@@ -164,6 +162,11 @@ td.r,th.r{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-
 .chart svg{width:100%;height:auto;display:block}
 .chart text{fill:var(--muted);font-family:var(--mono);font-size:10px}
 
+.legal{display:flex;flex-direction:column;gap:10px;line-height:1.55}
+.legal h3{margin-top:10px}
+.legal ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.foot{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;font-size:.85rem;padding-top:4px}
+.foot button{color:var(--muted);text-decoration:underline}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:11px 16px;border-radius:12px;font-size:.9rem;font-weight:600;max-width:calc(100% - 32px);z-index:20}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -194,7 +197,8 @@ td.r,th.r{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-
   </div>
   <p class="muted small" id="fb-missing" hidden>Accounts sind noch nicht eingerichtet (Firebase-Konfiguration fehlt). Du kannst die App als Gast testen.</p>
   <button class="btn ghost" id="guest-go">Ohne Konto testen</button>
-  <p class="muted small">Als Gast wird dein Fortschritt nur auf diesem Gerät gespeichert.</p>
+  <p class="muted small">Als Gast wird dein Fortschritt nur auf diesem Gerät gespeichert. Mit einem Konto speichern wir E-Mail, Benutzername und Lernfortschritt – Details in der Datenschutzerklärung.</p>
+  <div class="foot"><button data-go="privacy">Datenschutz</button><button data-go="contact">Kontakt</button></div>
 </section>
 
 <!-- START -->
@@ -211,8 +215,10 @@ td.r,th.r{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-
     <button class="tile" data-go="quizmenu"><span class="glyph">?!</span><div><h3>Allgemeinwissen</h3><p class="muted small" id="b-quiz-sub">8 Kategorien</p></div><span class="best" id="b-quiz"></span></button>
     <button class="tile wide feature" data-go="life"><div style="display:flex;flex-direction:column;gap:4px"><span class="label">Lifemaxing</span><h3 style="font-size:1.25rem">Gewohnheiten & Life-Skills</h3><span class="best" id="b-life"></span></div><span class="glyph" style="font-size:2rem">↗</span></button>
     <button class="tile wide" data-go="stats"><div><h3>Profil & Statistik</h3><p class="muted small" id="b-total"></p></div><span class="glyph">▤</span></button>
+    <!--admin-->
     <button class="tile wide admin" data-go="admin" id="admin-tile" hidden><div><span class="label" style="color:var(--accent)">Nur für dich</span><h3>Admin-Dashboard</h3><p class="muted small">Nutzer, Aktivität, Anmeldungen</p></div><span class="glyph">◎</span></button>
   </div>
+  <div class="foot"><button data-go="privacy">Datenschutz</button><button data-go="contact">Kontakt</button></div>
 </section>
 
 <!-- KOPFRECHNEN -->
@@ -299,9 +305,65 @@ td.r,th.r{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-
   <div class="stage left" style="gap:8px" id="st-quiz"></div>
   <div class="stage left" style="gap:10px" id="st-account"></div>
   <button class="btn ghost" id="st-reset">Fortschritt zurücksetzen</button>
+  <button class="btn ghost" id="st-del" hidden style="color:var(--bad)">Konto löschen</button>
+  <div class="stage left" id="st-delbox" hidden>
+    <h3>Konto endgültig löschen?</h3>
+    <p class="muted small">Dein Konto, dein Benutzername und dein gesamter Fortschritt werden gelöscht. Das lässt sich nicht rückgängig machen.</p>
+    <div class="field"><label for="del-pass">Zur Bestätigung dein Passwort</label><input id="del-pass" type="password" autocomplete="current-password"></div>
+    <p class="err" id="del-err"></p>
+    <div class="row"><button class="btn danger" id="del-yes">Endgültig löschen</button><button class="btn ghost" id="del-no">Abbrechen</button></div>
+  </div>
+  <div class="foot"><button data-go="privacy">Datenschutz</button><button data-go="contact">Kontakt</button></div>
   <div class="stage left" id="st-confirm" hidden>
     <p>Rekorde, gesehene Fragen, Fehler-Stapel und Gewohnheiten werden gelöscht. Dein Konto bleibt bestehen.</p>
     <div class="row"><button class="btn danger" id="st-yes">Ja, löschen</button><button class="btn ghost" id="st-no">Abbrechen</button></div>
+  </div>
+</section>
+
+<!-- DATENSCHUTZ -->
+<section class="view" id="v-privacy" hidden>
+  <div class="bar"><button class="back" data-back>← Zurück</button></div>
+  <div class="stage left legal">
+    <p class="label">Stand: November 2026</p>
+    <h2>Datenschutzerklärung</h2>
+    <h3>1. Verantwortlich</h3>
+    <p>Verantwortlich für die Datenverarbeitung in der App „Mind Trainer“ ist der Betreiber der App. Kontakt: <span class="mail">derreiche40@gmail.com</span></p>
+    <h3>2. Ohne Konto (Gastmodus)</h3>
+    <p>Im Gastmodus speichert die App deinen Fortschritt nur lokal im Speicher deines Browsers. Diese Daten verlassen dein Gerät nicht. Du kannst sie jederzeit löschen, indem du die Website-Daten im Browser entfernst.</p>
+    <h3>3. Mit Konto</h3>
+    <p>Wenn du ein Konto erstellst, verarbeiten wir:</p>
+    <ul>
+      <li>E-Mail-Adresse und Passwort (das Passwort wird nur verschlüsselt bei Google Firebase gespeichert, der Betreiber kann es nicht sehen)</li>
+      <li>deinen selbst gewählten Benutzernamen</li>
+      <li>deinen Lernfortschritt: Rekorde, Anzahl der Runden, bereits beantwortete Fragen, Fehler-Stapel, abgehakte Gewohnheiten der letzten 60 Tage, Trainingstage</li>
+      <li>Zeitpunkt der Registrierung und der letzten Aktivität</li>
+    </ul>
+    <p>Zweck ist, dir ein Konto bereitzustellen und deinen Fortschritt geräteübergreifend zu speichern. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Nutzungsvertrag).</p>
+    <p>Der Betreiber sieht in einer Übersicht Benutzernamen, Registrierungs- und Aktivitätszeitpunkt sowie die Zahl der gespielten Runden und beantworteten Fragen aller Nutzer. Das dient dazu, die App zu betreuen und weiterzuentwickeln (Art. 6 Abs. 1 lit. f DSGVO). Deine E-Mail-Adresse wird nur für die Anmeldung und das Zurücksetzen des Passworts verwendet.</p>
+    <h3>4. Eingesetzte Dienste</h3>
+    <ul>
+      <li><b>Google Firebase</b> (Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irland): Anmeldung (Firebase Authentication) und Datenbank (Cloud Firestore, Speicherort Frankfurt). Dabei können Daten auch an Google LLC in den USA übermittelt werden. Google ist nach dem EU-US Data Privacy Framework zertifiziert. Die Programmbibliotheken von Firebase werden beim Öffnen der App von Google-Servern geladen; dabei wird deine IP-Adresse übertragen.</li>
+      <li><b>GitHub Pages</b> (GitHub Inc., USA): Hosting der App. Beim Aufruf verarbeitet GitHub technisch notwendige Daten wie deine IP-Adresse in Server-Protokollen (Art. 6 Abs. 1 lit. f DSGVO).</li>
+    </ul>
+    <p>Die App nutzt keine Werbung, kein Tracking und keine Analyse-Tools. Schriften werden nicht von externen Servern geladen.</p>
+    <h3>5. Speicherdauer</h3>
+    <p>Deine Kontodaten bleiben gespeichert, bis du dein Konto löschst. Abgehakte Gewohnheiten werden nach 60 Tagen automatisch entfernt.</p>
+    <h3>6. Deine Rechte</h3>
+    <p>Du hast das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Datenübertragbarkeit und Widerspruch. Dein Konto und alle zugehörigen Daten kannst du jederzeit selbst unter „Profil & Statistik → Konto löschen“ entfernen oder die Löschung per E-Mail verlangen.</p>
+    <p>Du kannst dich außerdem bei einer Datenschutz-Aufsichtsbehörde beschweren, zum Beispiel bei der Landesbeauftragten für Datenschutz und Informationsfreiheit Nordrhein-Westfalen.</p>
+  </div>
+</section>
+
+<!-- KONTAKT -->
+<section class="view" id="v-contact" hidden>
+  <div class="bar"><button class="back" data-back>← Zurück</button></div>
+  <div class="stage left legal">
+    <h2>Kontakt</h2>
+    <p>„Mind Trainer“ ist ein privates, nicht-kommerzielles Hobbyprojekt. Die App ist kostenlos und enthält keine Werbung.</p>
+    <p class="label">E-Mail</p>
+    <p class="mail num">derreiche40@gmail.com</p>
+    <button class="btn ghost" id="copy-mail">E-Mail-Adresse kopieren</button>
+    <p class="muted small">Fragen, Fehler in Quizfragen, Ideen für neue Kategorien oder Löschanfragen gern per E-Mail.</p>
   </div>
 </section>
 
